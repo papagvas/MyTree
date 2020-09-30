@@ -5,34 +5,25 @@ import qualified System.Environment as Env (getArgs)
 
 main :: IO ()
 main = do
-  args <- Env.getArgs
-  isDir <- mapM Files.getFileStatus args >>= mapM (return . Files.isDirectory)
+  isDir <- Env.getArgs >>= mapM Files.getFileStatus >>= mapM (return . Files.isDirectory)
+  inPath <- Env.getArgs >>= return . head
   case listToMaybe isDir of
     Nothing -> error $ "Specify arguments pussy"
     Just False -> error $ "The file is not a directory"
-    Just True -> putStrLn (head args) >>  drawDir (head args) (head args) 
+    Just True -> Env.getArgs >>= makeTree (0, length inPath)
 
-drawFile :: FilePath -> FilePath -> FilePath -> IO ()
-drawFile inPath fullPath name = do
-  putStrLn $ (++) "|----" name
-  isDir <- Files.getFileStatus (fullPath ++ name) >>= return . Files.isDirectory
+makeTree :: (Int, Int) -> [FilePath] -> IO ()
+makeTree spaces dirs = do
+  putStr $ "|" ++ (concat $ replicate (fst spaces - snd spaces) " ") 
+  putStrLn dirPath  
+  dirContents  <- Dir.getDirectoryContents dirPath
+  mapM_ (drawCont spaces) $ map (dirPath ++) (filter (\file -> head file /= '.') dirContents)
+  where
+    dirPath = head dirs
+
+drawCont :: (Int, Int) -> FilePath -> IO ()
+drawCont spaces fileOrDir = do
+  isDir <- Files.getFileStatus fileOrDir >>= return . Files.isDirectory
   case isDir of
-    True -> drawDir inPath (fullPath ++ name ++ "/")
-    False -> return ()
-
-drawDir :: FilePath -> FilePath -> IO ()
-drawDir inPath fullPath = do
-  dirContents  <- Dir.getDirectoryContents fullPath                                              
-  mapM_ (spaceDrawer inPath fullPath) (filter (\file -> head file /= '.') dirContents)
-
-amOfSpaces :: FilePath -> FilePath -> Int
-amOfSpaces inPath fullPath = 5 * count '/' (drop (length inPath) fullPath)
-
-count :: Char -> String -> Int
-count c str = length $ filter (== c) str 
-
-printSpaces :: FilePath -> FilePath -> FilePath -> IO () 
-printSpaces inPath fullPath file = putStr (concat $ replicate (amOfSpaces inPath fullPath) " ")
-
-spaceDrawer :: FilePath -> FilePath -> FilePath -> IO ()
-spaceDrawer inPath fullPath fileName = printSpaces inPath fullPath fileName >> drawFile inPath fullPath fileName
+    True -> makeTree (fst spaces + (length $ fileOrDir ++ "/"), snd spaces) [fileOrDir ++ "/"] 
+    False -> putStrLn $ drop (snd spaces) fileOrDir   
