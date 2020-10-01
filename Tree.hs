@@ -8,7 +8,7 @@ main = do
   args <- Env.getArgs
   isDir <- mapM Files.getFileStatus args >>= mapM (return . Files.isDirectory)
   case listToMaybe isDir of
-    Nothing -> error $ "Specify arguments pussy"
+    Nothing -> drawDir "./" "./"
     Just False -> error $ "The file is not a directory"
     Just True -> putStrLn (head args) >>  drawDir (head args) (head args) 
 
